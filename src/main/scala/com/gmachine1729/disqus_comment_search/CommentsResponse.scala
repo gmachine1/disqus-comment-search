@@ -21,7 +21,7 @@ object Author {
 
 case class Comment(message: String, author: Author, createdAt: String, url: String, forum: String, likes: Int, dislikes: Int) extends Ordered[Comment] {
   def toHtml: String = {
-    div(a(href:=url)(createdAt.substring(0, 10) ++ " on " ++ forum), message).toString()
+    div(a(href:=url)(createdAt.substring(0, 10) ++ " on " ++ forum), raw(message)).toString()
   }
 
   def compare(other: Comment): Int = {

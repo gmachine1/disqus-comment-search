@@ -18,7 +18,8 @@ libraryDependencies ++= Seq(
   "javax.servlet" % "javax.servlet-api" % "3.1.0" % "provided",
   "org.scalaj" %% "scalaj-http" % "2.4.1",
   "com.lihaoyi" %% "upickle" % "0.7.1",
-  "com.lihaoyi" %% "scalatags" % "0.6.7"
+  "com.lihaoyi" %% "scalatags" % "0.6.7",
+  "org.scalatra" %% "scalatra-scalate" % ScalatraVersion
 )
 
 javaOptions ++= Seq(

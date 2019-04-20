@@ -1,0 +1,11 @@
+<%@ val results: String %>
+<html>
+<head><title>Disqus comment search</title></head>
+<body>
+    <form action="/search">
+    Disqus username: <input type="text" name="username"/>
+    <input type="submit" value="Submit"/>
+    </form>
+    <%= unescape(results) %>
+</body>
+</html>
