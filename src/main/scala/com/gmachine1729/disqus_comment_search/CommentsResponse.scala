@@ -20,14 +20,15 @@ object Author {
 }
 
 case class Comment(message: String, author: Author, createdAt: String, url: String, forum: String, likes: Int, dislikes: Int) extends Ordered[Comment] {
+  val parser = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+
   def toHtml: String = {
     div(a(href:=url)(createdAt.substring(0, 10) ++ " on " ++ forum), raw(message)).toString()
   }
 
   def compare(other: Comment): Int = {
-    val parser = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
-    if (parser.parse(other.createdAt).getTime - parser.parse(other.createdAt).getTime > 0) 1
-    -1
+    if (parser.parse(createdAt).getTime - parser.parse(other.createdAt).getTime > 0) -1
+    else 1
   }
 }
 object Comment {

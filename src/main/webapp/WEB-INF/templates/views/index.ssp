@@ -4,6 +4,7 @@
 <body>
     <form action="/search">
     Disqus username: <input type="text" name="username"/>
+    Search terms: <input type="text" name="query"/>
     <input type="submit" value="Submit"/>
     </form>
     <%= unescape(results) %>

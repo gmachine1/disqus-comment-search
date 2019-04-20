@@ -23,7 +23,4 @@ def filter_json_response(json_obj):
 	
 
 response_json = sys.stdin.read()
-f = open("testfile.txt", "w")
-f.write(response_json)
-f.close()
 filter_json_response(json.loads(response_json))
