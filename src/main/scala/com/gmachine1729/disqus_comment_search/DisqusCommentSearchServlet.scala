@@ -22,7 +22,7 @@ import scala.sys.process._
 class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
   val API_KEY = "E8Uh5l5fHZ6gD8U3KycjAIAk46f68Zw7C6eW8WSjZvCLXebZ7p0r1yrYDrLilk2F"
   val BASE_URL = "https://disqus.com/api/3.0/timelines/activities"
-  val DEFAULT_LIMIT: Integer = 20
+  val DEFAULT_LIMIT: Integer = 100
   val props = new Properties()
   props.put("annotators", "tokenize, ssplit, pos, lemma")
   val pipeline = new StanfordCoreNLP(props)
@@ -72,7 +72,11 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
     }
 
     def commentsHtml: String = {
+      val t2 = System.nanoTime()
       val filteredCommentBatch = Await.result[Iterable[Comment]](commentBatch, Duration.Inf)
+      val t3 = System.nanoTime()
+      val secondsTaken2 = (t3-t2) / 1000000000.0
+      System.out.println("Waiting for final comment batch took: " + secondsTaken2)
       accumComments.appendAll(filteredCommentBatch)
       val t0 = System.nanoTime()
       //val htmlResponse = accumComments.sorted.map(_.toHtml).foldLeft("")(_ ++ "\n" ++ _)
@@ -118,13 +122,22 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
       } else {
         val query: String = params("query").toLowerCase
         val commentDownloadLimit: Int = params("comment_download_limit").toInt
+        val t0 = System.nanoTime()
         val queryStringAnnotation = new Annotation(query)
         pipeline.annotate(queryStringAnnotation)
 
         val queryTokens: Set[String] = queryStringAnnotation.get(classOf[TokensAnnotation]).toSeq.map(_.lemma()).toSet
+        val t1 = System.nanoTime()
+        val secondsTaken = (t1-t0) / 1000000000.0
+        System.out.println(secondsTaken)
         val cursor: String = ""
         val accumComments: ArrayBuffer[Comment] = new ArrayBuffer[Comment]()
-        downloadComments(username, queryTokens, commentDownloadLimit)(cursor, 0, accumComments, None)
+        val t2 = System.nanoTime()
+        val res = downloadComments(username, queryTokens, commentDownloadLimit)(cursor, 0, accumComments, None)
+        val t3 = System.nanoTime()
+        val secondsTaken2 = (t3-t2) / 1000000000.0
+        System.out.println("total time: " + secondsTaken2)
+        res
       }
     }
     contentType = "text/html"
