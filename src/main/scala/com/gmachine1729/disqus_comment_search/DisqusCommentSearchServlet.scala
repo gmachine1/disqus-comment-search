@@ -52,8 +52,12 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
     val filteredJson = (new URL(getUrl(username, cursor, DEFAULT_LIMIT)) #> String.format("python src/main/python/filter_json_response.py %s", username)).!!
     prevCommentBatch match {
       case Some(future) => {
-        Await.ready[Iterable[Comment]](future, Duration.Inf)
-        future.map(accumComments.appendAll)
+        val t0 = System.nanoTime()
+        val filteredCommentBatch = Await.result[Iterable[Comment]](future, Duration.Inf)
+        val t1 = System.nanoTime()
+        val secondsTaken = (t1-t0) / 1000000000.0
+        println("Waited time for filter future: " + secondsTaken)
+        accumComments.appendAll(filteredCommentBatch)
       }
       case None =>
     }
@@ -63,11 +67,12 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
     }
 
     def commentsHtml: String = {
-      Await.ready[Iterable[Comment]](commentBatch, Duration.Inf)
-      commentBatch.map(accumComments.appendAll)
+      val filteredCommentBatch = Await.result[Iterable[Comment]](commentBatch, Duration.Inf)
+      accumComments.appendAll(filteredCommentBatch)
       val t0 = System.nanoTime()
       //val htmlResponse = accumComments.sorted.map(_.toHtml).foldLeft("")(_ ++ "\n" ++ _)
       val htmlResponse = new StringBuffer()
+      println("ArrayBuffer[Comment] length: " + accumComments.length)
       for (comment <- accumComments.sorted) {
         htmlResponse.append(comment.toHtml)
         htmlResponse.append("<hr>")
@@ -75,6 +80,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
       val t1 = System.nanoTime()
       val secondsTaken = (t1-t0) / 1000000000.0
       System.out.println(secondsTaken)
+      println("ArrayBuffer[Comment] length again: " + accumComments.length)
       htmlResponse.toString
     }
 
