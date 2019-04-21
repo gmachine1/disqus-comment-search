@@ -22,7 +22,7 @@ import scala.sys.process._
 class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
   val API_KEY = "E8Uh5l5fHZ6gD8U3KycjAIAk46f68Zw7C6eW8WSjZvCLXebZ7p0r1yrYDrLilk2F"
   val BASE_URL = "https://disqus.com/api/3.0/timelines/activities"
-  val DEFAULT_LIMIT: Integer = 10
+  val DEFAULT_LIMIT: Integer = 20
   val props = new Properties()
   props.put("annotators", "tokenize, ssplit, pos, lemma")
   val pipeline = new StanfordCoreNLP(props)
