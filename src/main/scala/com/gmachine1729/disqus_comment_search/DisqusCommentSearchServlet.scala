@@ -49,7 +49,12 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
 
   def downloadComments(username: String, searchTermsLemmatized: Set[String], commentDownloadLimit: Int)(
       cursor: String, numDownloaded: Int, accumComments: ArrayBuffer[Comment], prevCommentBatch: Option[Future[Iterable[Comment]]]): String = {
+    val t0 = System.nanoTime()
     val filteredJson = (new URL(getUrl(username, cursor, DEFAULT_LIMIT)) #> String.format("python src/main/python/filter_json_response.py %s", username)).!!
+    val t1 = System.nanoTime()
+    val secondsTaken = (t1-t0) / 1000000000.0
+    println("Url: " + getUrl(username, cursor, DEFAULT_LIMIT))
+    println("Retrieving and filtering json took: " + secondsTaken)
     prevCommentBatch match {
       case Some(future) => {
         val t0 = System.nanoTime()
