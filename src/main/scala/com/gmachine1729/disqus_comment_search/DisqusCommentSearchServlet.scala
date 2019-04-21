@@ -65,14 +65,17 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
     def commentsHtml: String = {
       Await.ready[Iterable[Comment]](commentBatch, Duration.Inf)
       commentBatch.map(accumComments.appendAll)
-      /*accumComments.sortWith(
-        (c1, c2) => Comment.dateTimeParser.parse(c1.createdAt).getTime - Comment.dateTimeParser.parse(c2.createdAt).getTime > 0)*/
       val t0 = System.nanoTime()
-      val htmlResponse = accumComments.sorted.map(_.toHtml).foldLeft("")(_ ++ "\n" ++ _)
+      //val htmlResponse = accumComments.sorted.map(_.toHtml).foldLeft("")(_ ++ "\n" ++ _)
+      val htmlResponse = new StringBuffer()
+      for (comment <- accumComments.sorted) {
+        htmlResponse.append(comment.toHtml)
+        htmlResponse.append("<hr>")
+      }
       val t1 = System.nanoTime()
       val secondsTaken = (t1-t0) / 1000000000.0
       System.out.println(secondsTaken)
-      htmlResponse
+      htmlResponse.toString
     }
 
     System.out.println(commentsResponse.response.objects.size)
