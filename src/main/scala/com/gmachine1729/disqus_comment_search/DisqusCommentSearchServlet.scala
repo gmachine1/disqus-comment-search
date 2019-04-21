@@ -7,9 +7,9 @@ import org.scalatra._
 import org.scalatra.scalate.ScalateSupport
 import upickle.default._
 import org.jsoup.Jsoup
-import org.jsoup.nodes.{Document, Element}
 import edu.stanford.nlp.pipeline._
 import edu.stanford.nlp.ling.CoreAnnotations._
+import scalaj.http.Http
 
 import scala.collection.JavaConversions._
 
@@ -22,14 +22,14 @@ import scala.sys.process._
 class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
   val API_KEY = "E8Uh5l5fHZ6gD8U3KycjAIAk46f68Zw7C6eW8WSjZvCLXebZ7p0r1yrYDrLilk2F"
   val BASE_URL = "https://disqus.com/api/3.0/timelines/activities"
-  val LIMIT: Integer = 100
+  val DEFAULT_LIMIT: Integer = 10
   val props = new Properties()
   props.put("annotators", "tokenize, ssplit, pos, lemma")
   val pipeline = new StanfordCoreNLP(props)
 
-  def getUrl(username: String, cursor: String): String = {
+  def getUrl(username: String, cursor: String, limit: Integer): String = {
     String.format("%s?type=profile&index=comments&target=user:username:%s&cursor=%s&limit=%d&api_key=%s",
-      BASE_URL, username, cursor, LIMIT, API_KEY)
+      BASE_URL, username, cursor, limit, API_KEY)
   }
 
   def containsSearchTerms(searchTermsLemmatized: Set[String])(comment: Comment): Int = {
@@ -47,9 +47,10 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
     }
   }
 
-  def downloadComments(username: String, searchTermsLemmatized: Set[String])(cursor: String, accumComments: ArrayBuffer[Comment], processedComments: Option[Future[Iterable[Comment]]]): String = {
-    val filteredJson = (new URL(getUrl(username, cursor)) #> String.format("python src/main/python/filter_json_response.py %s", username)).!!
-    processedComments match {
+  def downloadComments(username: String, searchTermsLemmatized: Set[String], commentDownloadLimit: Int)(
+      cursor: String, numDownloaded: Int, accumComments: ArrayBuffer[Comment], prevCommentBatch: Option[Future[Iterable[Comment]]]): String = {
+    val filteredJson = (new URL(getUrl(username, cursor, DEFAULT_LIMIT)) #> String.format("python src/main/python/filter_json_response.py %s", username)).!!
+    prevCommentBatch match {
       case Some(future) => {
         Await.ready[Iterable[Comment]](future, Duration.Inf)
         future.map(accumComments.appendAll)
@@ -60,34 +61,64 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
     val commentBatch = Future {
         commentsResponse.response.objects.map(_._2).filter(comment => containsSearchTerms(searchTermsLemmatized)(comment) > 0)
     }
-    commentsResponse.cursor.next match {
-      case null       => {
-        Await.ready[Iterable[Comment]](commentBatch, Duration.Inf)
-        commentBatch.map(accumComments.appendAll)
-        /*accumComments.sortWith(
-          (c1, c2) => Comment.dateTimeParser.parse(c1.createdAt).getTime - Comment.dateTimeParser.parse(c2.createdAt).getTime > 0)*/
-        accumComments.sorted.map(_.toHtml).foldLeft("")(_ ++ "\n" ++ _)
-      }
-      case cursorNext => downloadComments(username, searchTermsLemmatized)(cursorNext, accumComments, Some(commentBatch))
+
+    def commentsHtml: String = {
+      Await.ready[Iterable[Comment]](commentBatch, Duration.Inf)
+      commentBatch.map(accumComments.appendAll)
+      /*accumComments.sortWith(
+        (c1, c2) => Comment.dateTimeParser.parse(c1.createdAt).getTime - Comment.dateTimeParser.parse(c2.createdAt).getTime > 0)*/
+      val t0 = System.nanoTime()
+      val htmlResponse = accumComments.sorted.map(_.toHtml).foldLeft("")(_ ++ "\n" ++ _)
+      val t1 = System.nanoTime()
+      val secondsTaken = (t1-t0) / 1000000000.0
+      System.out.println(secondsTaken)
+      htmlResponse
     }
+
+    System.out.println(commentsResponse.response.objects.size)
+
+    commentsResponse.cursor.next match {
+      case null       => commentsHtml
+      case cursorNext => {
+        val numDownloadedUpdated = numDownloaded + commentsResponse.response.objects.size
+        if (numDownloadedUpdated < commentDownloadLimit)
+          downloadComments(username, searchTermsLemmatized, commentDownloadLimit)(
+            cursorNext, numDownloadedUpdated, accumComments, Some(commentBatch))
+        else
+          commentsHtml
+      }
+    }
+  }
+
+  def usernameExists(username: String): Boolean = {
+    val usernameUrl: String = String.format("https://disqus.com/by/%s/", username)
+    val resp = Http(usernameUrl).asString
+    resp.isCodeInRange(200, 299)
   }
 
   get("/search") {
     val username: String = params("username")
-    val query: String = params("query").toLowerCase
-    val queryStringAnnotation = new Annotation(query)
-    pipeline.annotate(queryStringAnnotation)
+    val htmlResponse = {
+      if (!usernameExists(username)) {
+        String.format("<div>Did not find any Disqus user with username <b>%s</b></div>", username)
+      } else {
+        val query: String = params("query").toLowerCase
+        val commentDownloadLimit: Int = params("comment_download_limit").toInt
+        val queryStringAnnotation = new Annotation(query)
+        pipeline.annotate(queryStringAnnotation)
 
-    val queryTokens: Set[String] = queryStringAnnotation.get(classOf[TokensAnnotation]).toSeq.map(_.lemma()).toSet
-    val cursor: String = ""
-    val accumComments: ArrayBuffer[Comment] = new ArrayBuffer[Comment]()
-    val results = downloadComments(username, queryTokens)(cursor, accumComments, None)
+        val queryTokens: Set[String] = queryStringAnnotation.get(classOf[TokensAnnotation]).toSeq.map(_.lemma()).toSet
+        val cursor: String = ""
+        val accumComments: ArrayBuffer[Comment] = new ArrayBuffer[Comment]()
+        downloadComments(username, queryTokens, commentDownloadLimit)(cursor, 0, accumComments, None)
+      }
+    }
     contentType = "text/html"
-    ssp("/WEB-INF/templates/views/index.ssp", "results" -> results)
+    ssp("/WEB-INF/templates/views/index.ssp", "htmlResponse" -> htmlResponse)
   }
 
   get("/") {
     contentType = "text/html"
-    ssp("/WEB-INF/templates/views/index.ssp", "results" -> "")
+    ssp("/WEB-INF/templates/views/index.ssp", "htmlResponse" -> "")
   }
 }

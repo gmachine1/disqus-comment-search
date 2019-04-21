@@ -27,8 +27,15 @@ case class Comment(message: String, author: Author, createdAt: String, url: Stri
   }
 
   def compare(other: Comment): Int = {
-    if (parser.parse(createdAt).getTime - parser.parse(other.createdAt).getTime > 0) -1
-    else 1
+    try {
+      if (parser.parse(createdAt).getTime - parser.parse(other.createdAt).getTime > 0) -1
+      else 1
+    } catch {
+      case e => {
+        e.printStackTrace()
+        -1
+      }
+    }
   }
 }
 object Comment {

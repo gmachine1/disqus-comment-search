@@ -1,12 +1,13 @@
-<%@ val results: String %>
+<%@ val htmlResponse: String %>
 <html>
 <head><title>Disqus comment search</title></head>
 <body>
     <form action="/search">
     Disqus username: <input type="text" name="username"/>
     Search terms: <input type="text" name="query"/>
+    Limit comments: <input type="number" name="comment_download_limit" min="100" max="100000" step="100" value="100">
     <input type="submit" value="Submit"/>
     </form>
-    <%= unescape(results) %>
+    <%= unescape(htmlResponse) %>
 </body>
 </html>
