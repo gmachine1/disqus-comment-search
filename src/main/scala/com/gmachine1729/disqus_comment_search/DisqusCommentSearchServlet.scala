@@ -5,21 +5,23 @@ import java.util.Properties
 
 import org.scalatra._
 import org.scalatra.scalate.ScalateSupport
+import org.scalatra.forms._
 import upickle.default._
 import org.jsoup.Jsoup
 import edu.stanford.nlp.pipeline._
 import edu.stanford.nlp.ling.CoreAnnotations._
+import org.scalatra.i18n.I18nSupport
 import scalaj.http.Http
 
 import scala.collection.JavaConversions._
-
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.sys.process._
 
-class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
+
+class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport with FormSupport with I18nSupport {
   val API_KEY = "E8Uh5l5fHZ6gD8U3KycjAIAk46f68Zw7C6eW8WSjZvCLXebZ7p0r1yrYDrLilk2F"
   val BASE_URL = "https://disqus.com/api/3.0/timelines/activities"
   val DEFAULT_LIMIT: Integer = 100
@@ -82,7 +84,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
       accumComments.appendAll(filteredCommentBatch)
       val t0 = System.nanoTime()
       //val htmlResponse = accumComments.sorted.map(_.toHtml).foldLeft("")(_ ++ "\n" ++ _)
-      val htmlResponse = new StringBuffer()
+      val htmlResponse = new StringBuffer(String.format("<h4><b>%d</b> results</h4><hr>", new Integer(accumComments.length)))
       println("ArrayBuffer[Comment] length: " + accumComments.length)
       for (comment <- accumComments.sorted) {
         htmlResponse.append(comment.toHtml)
@@ -131,23 +133,29 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
 
   get("/search") {
     val username: String = params("username")
-    val htmlResponse = {
+    def formToHtmlResponse(validatedForm: ValidationForm): String = {
       if (!usernameExists(username)) {
-        String.format("<div>Did not find any Disqus user with username <b>%s</b></div>", username)
+        String.format ("<div>Did not find any Disqus user with username <b>%s</b></div>", username)
       } else {
-        val query: String = params("query").toLowerCase
-        val commentDownloadLimit: Int = params("comment_download_limit").toInt
+        val query: String = params ("query").toLowerCase
+        val commentDownloadLimit: Int = params ("comment_download_limit").toInt
         val cursor: String = ""
-        val accumComments: ArrayBuffer[Comment] = new ArrayBuffer[Comment](100)
-        val t2 = System.nanoTime()
-        val res = downloadComments(username, getQueryTokens(query), getDisqusLimitParam(commentDownloadLimit), commentDownloadLimit)(
+        val accumComments: ArrayBuffer[Comment] = new ArrayBuffer[Comment] (100)
+        val t2 = System.nanoTime ()
+        val res = downloadComments (username, getQueryTokens (query), getDisqusLimitParam (commentDownloadLimit), commentDownloadLimit) (
           cursor, 0, accumComments, None)
-        val t3 = System.nanoTime()
-        val secondsTaken2 = (t3-t2) / 1000000000.0
-        System.out.println("total time: " + secondsTaken2)
+        val t3 = System.nanoTime ()
+        val secondsTaken2 = (t3 - t2) / 1000000000.0
+        System.out.println ("total time: " + secondsTaken2)
         res
       }
     }
+    val form = mapping(
+      "username" -> label("Username", text(required, maxlength(100))),
+      "query" -> label("Query", optional(text(required, maxlength(100)))),
+      "comment_download_limit" -> label("Comment Download Limit", number())
+    )(ValidationForm.apply)
+    val htmlResponse = validate(form)(_.toString(), formToHtmlResponse(_))
     contentType = "text/html"
     ssp("/WEB-INF/templates/views/index.ssp", "htmlResponse" -> htmlResponse)
   }

@@ -1,10 +1,14 @@
 <%@ val htmlResponse: String %>
+<% import org.scalatra.forms.views._ %>
+<% import org.scalatra.forms._ %>
 <html>
 <head><title>Disqus comment search</title></head>
 <body>
-    <form action="/search">
+    <h1>Disqus comment search</h1>
+    <form action="/search" method="GET">
     Disqus username: <input type="text" name="username"/>
     Search terms: <input type="text" name="query"/>
+    <%--Match all search terms: <input type=checkbox name="match_all_search_terms">--%>
     Limit comments: <input type="number" name="comment_download_limit" min="100" max="100000" step="100" value="100">
     <input type="submit" value="Submit"/>
     </form>
