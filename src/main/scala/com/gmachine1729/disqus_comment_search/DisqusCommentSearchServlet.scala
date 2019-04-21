@@ -23,6 +23,8 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
   val API_KEY = "E8Uh5l5fHZ6gD8U3KycjAIAk46f68Zw7C6eW8WSjZvCLXebZ7p0r1yrYDrLilk2F"
   val BASE_URL = "https://disqus.com/api/3.0/timelines/activities"
   val DEFAULT_LIMIT: Integer = 100
+  val MIN_LIMIT: Integer = 5
+  val MAX_LIMIT: Integer = 100
   val props = new Properties()
   props.put("annotators", "tokenize, ssplit, pos, lemma")
   val pipeline = new StanfordCoreNLP(props)
@@ -47,13 +49,13 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
     }
   }
 
-  def downloadComments(username: String, searchTermsLemmatized: Set[String], commentDownloadLimit: Int)(
+  def downloadComments(username: String, searchTermsLemmatized: Set[String], limitParam: Int, commentDownloadLimit: Int)(
       cursor: String, numDownloaded: Int, accumComments: ArrayBuffer[Comment], prevCommentBatch: Option[Future[Iterable[Comment]]]): String = {
     val t0 = System.nanoTime()
-    val filteredJson = (new URL(getUrl(username, cursor, DEFAULT_LIMIT)) #> String.format("python src/main/python/filter_json_response.py %s", username)).!!
+    val filteredJson = (new URL(getUrl(username, cursor, limitParam)) #> String.format("python src/main/python/filter_json_response.py %s", username)).!!
     val t1 = System.nanoTime()
     val secondsTaken = (t1-t0) / 1000000000.0
-    println("Url: " + getUrl(username, cursor, DEFAULT_LIMIT))
+    println("Url: " + getUrl(username, cursor, limitParam))
     println("Retrieving and filtering json took: " + secondsTaken)
     prevCommentBatch match {
       case Some(future) => {
@@ -99,8 +101,9 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
       case null       => commentsHtml
       case cursorNext => {
         val numDownloadedUpdated = numDownloaded + commentsResponse.response.objects.size
-        if (numDownloadedUpdated < commentDownloadLimit)
-          downloadComments(username, searchTermsLemmatized, commentDownloadLimit)(
+        val remainingNumComments = commentDownloadLimit - numDownloadedUpdated
+        if (remainingNumComments > 0)
+          downloadComments(username, searchTermsLemmatized, getDisqusLimitParam(remainingNumComments), commentDownloadLimit)(
             cursorNext, numDownloadedUpdated, accumComments, Some(commentBatch))
         else
           commentsHtml
@@ -108,10 +111,22 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
     }
   }
 
-  def usernameExists(username: String): Boolean = {
+  private def usernameExists(username: String): Boolean = {
     val usernameUrl: String = String.format("https://disqus.com/by/%s/", username)
     val resp = Http(usernameUrl).asString
     resp.isCodeInRange(200, 299)
+  }
+
+  private def getQueryTokens(query: String): Set[String] = {
+    val queryStringAnnotation = new Annotation(query)
+    pipeline.annotate(queryStringAnnotation)
+    queryStringAnnotation.get(classOf[TokensAnnotation]).toSeq.map(_.lemma()).toSet
+  }
+
+  val estimatedActualToLimitParamRatio: Float = 2.5.toFloat
+
+  private def getDisqusLimitParam(remainingNumComments: Int): Int = {
+    Math.max(MIN_LIMIT, Math.min(MAX_LIMIT, (remainingNumComments / estimatedActualToLimitParamRatio).toInt))
   }
 
   get("/search") {
@@ -122,18 +137,11 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport {
       } else {
         val query: String = params("query").toLowerCase
         val commentDownloadLimit: Int = params("comment_download_limit").toInt
-        val t0 = System.nanoTime()
-        val queryStringAnnotation = new Annotation(query)
-        pipeline.annotate(queryStringAnnotation)
-
-        val queryTokens: Set[String] = queryStringAnnotation.get(classOf[TokensAnnotation]).toSeq.map(_.lemma()).toSet
-        val t1 = System.nanoTime()
-        val secondsTaken = (t1-t0) / 1000000000.0
-        System.out.println(secondsTaken)
         val cursor: String = ""
-        val accumComments: ArrayBuffer[Comment] = new ArrayBuffer[Comment]()
+        val accumComments: ArrayBuffer[Comment] = new ArrayBuffer[Comment](100)
         val t2 = System.nanoTime()
-        val res = downloadComments(username, queryTokens, commentDownloadLimit)(cursor, 0, accumComments, None)
+        val res = downloadComments(username, getQueryTokens(query), getDisqusLimitParam(commentDownloadLimit), commentDownloadLimit)(
+          cursor, 0, accumComments, None)
         val t3 = System.nanoTime()
         val secondsTaken2 = (t3-t2) / 1000000000.0
         System.out.println("total time: " + secondsTaken2)
