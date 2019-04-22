@@ -19,12 +19,12 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.sys.process._
+import scala.util.{Try,Success,Failure}
 
 
 class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport with FormSupport with I18nSupport {
   val API_KEY = "E8Uh5l5fHZ6gD8U3KycjAIAk46f68Zw7C6eW8WSjZvCLXebZ7p0r1yrYDrLilk2F"
   val BASE_URL = "https://disqus.com/api/3.0/timelines/activities"
-  val DEFAULT_LIMIT: Integer = 100
   val MIN_LIMIT: Integer = 5
   val MAX_LIMIT: Integer = 100
   val props = new Properties()
@@ -36,22 +36,28 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
       BASE_URL, username, cursor, limit, API_KEY)
   }
 
-  def containsSearchTerms(searchTermsLemmatized: Set[String])(comment: Comment): Int = {
+  def containsSearchTerms(searchTermsLemmatized: Set[String], matchAll: Boolean)(comment: Comment): Int = {
     if (searchTermsLemmatized.isEmpty) 1
     else {
       val doc = new Annotation(Jsoup.parse(comment.message).text().toLowerCase)
       pipeline.annotate(doc)
       val sentences = doc.get(classOf[SentencesAnnotation])
       var numMatches = 0
-      for (sentence <- sentences; token <- sentence.get(classOf[TokensAnnotation])) {
-        val lemma = token.get(classOf[LemmaAnnotation])
-        if (searchTermsLemmatized.contains(lemma)) numMatches += 1
+      if (!matchAll) {
+        for (sentence <- sentences; token <- sentence.get(classOf[TokensAnnotation])) {
+          val lemma = token.get(classOf[LemmaAnnotation])
+          if (searchTermsLemmatized.contains(lemma)) numMatches += 1
+        }
+        numMatches
+      } else {
+        val wordsInDoc = sentences.toIterable.map(_.get(classOf[TokensAnnotation]).map(_.get(classOf[LemmaAnnotation])).toIterable).flatten.toSet
+        if (searchTermsLemmatized.subsetOf(wordsInDoc)) 1
+        else 0
       }
-      numMatches
     }
   }
 
-  def downloadComments(username: String, searchTermsLemmatized: Set[String], limitParam: Int, commentDownloadLimit: Int)(
+  def downloadComments(username: String, searchTermsLemmatized: Set[String], limitParam: Int, commentDownloadLimit: Int, matchAllTerms: Boolean)(
       cursor: String, numDownloaded: Int, accumComments: ArrayBuffer[Comment], prevCommentBatch: Option[Future[Iterable[Comment]]]): String = {
     val t0 = System.nanoTime()
     val filteredJson = (new URL(getUrl(username, cursor, limitParam)) #> String.format("python src/main/python/filter_json_response.py %s", username)).!!
@@ -72,7 +78,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
     }
     val commentsResponse = read[CommentsResponse](filteredJson)
     val commentBatch = Future {
-        commentsResponse.response.objects.map(_._2).filter(comment => containsSearchTerms(searchTermsLemmatized)(comment) > 0)
+        commentsResponse.response.objects.map(_._2).filter(comment => containsSearchTerms(searchTermsLemmatized, matchAllTerms)(comment) > 0)
     }
 
     def commentsHtml: String = {
@@ -105,7 +111,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
         val numDownloadedUpdated = numDownloaded + commentsResponse.response.objects.size
         val remainingNumComments = commentDownloadLimit - numDownloadedUpdated
         if (remainingNumComments > 0)
-          downloadComments(username, searchTermsLemmatized, getDisqusLimitParam(remainingNumComments), commentDownloadLimit)(
+          downloadComments(username, searchTermsLemmatized, getDisqusLimitParam(remainingNumComments), commentDownloadLimit, matchAllTerms)(
             cursorNext, numDownloadedUpdated, accumComments, Some(commentBatch))
         else
           commentsHtml
@@ -132,36 +138,49 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
   }
 
   get("/search") {
-    val username: String = params("username")
-    def formToHtmlResponse(validatedForm: ValidationForm): String = {
+    def formToHtmlResponse(validatedForm: ValidationForm): (ValidationForm, String) = {
+      val username = validatedForm.username
+      val query = validatedForm.query.getOrElse("").toLowerCase
+      val commentDownloadLimit = validatedForm.comment_download_limit
+      val matchAllTerms = validatedForm.match_all_terms
       if (!usernameExists(username)) {
-        String.format ("<div>Did not find any Disqus user with username <b>%s</b></div>", username)
+        (validatedForm, String.format ("<div>Did not find any Disqus user with username <b>%s</b></div>", username))
       } else {
-        val query: String = params ("query").toLowerCase
-        val commentDownloadLimit: Int = params ("comment_download_limit").toInt
         val cursor: String = ""
         val accumComments: ArrayBuffer[Comment] = new ArrayBuffer[Comment] (100)
         val t2 = System.nanoTime ()
-        val res = downloadComments (username, getQueryTokens (query), getDisqusLimitParam (commentDownloadLimit), commentDownloadLimit) (
+        val res = downloadComments (username, getQueryTokens (query), getDisqusLimitParam (commentDownloadLimit), commentDownloadLimit, matchAllTerms) (
           cursor, 0, accumComments, None)
         val t3 = System.nanoTime ()
         val secondsTaken2 = (t3 - t2) / 1000000000.0
         System.out.println ("total time: " + secondsTaken2)
-        res
+        (validatedForm, res)
       }
     }
+
+    def formErrorToHtmlResponse(hasErrors: Seq[(String, String)]): (ValidationForm, String) = {
+      val limit = Try(params("comment_download_limit").toInt) match {
+        case Success(value) => value
+        case _ => 100
+      }
+      val validationForm = ValidationForm(params("username"), Some(params("query")), limit, params("comment_download_limit").equals("on"))
+      val errorMsg = hasErrors.map(_._2).fold("")(_ ++ "<br>" ++ _)
+      (validationForm, errorMsg)
+    }
+
     val form = mapping(
       "username" -> label("Username", text(required, maxlength(100))),
       "query" -> label("Query", optional(text(required, maxlength(100)))),
-      "comment_download_limit" -> label("Comment Download Limit", number())
+      "comment_download_limit" -> label("Comment Download Limit", number()),
+      "match_all_terms" -> label("Require match all terms", boolean())
     )(ValidationForm.apply)
-    val htmlResponse = validate(form)(_.toString(), formToHtmlResponse(_))
+    val (formParams, htmlResponse) = validate(form)(formErrorToHtmlResponse, formToHtmlResponse)
     contentType = "text/html"
-    ssp("/WEB-INF/templates/views/index.ssp", "htmlResponse" -> htmlResponse)
+    ssp("/WEB-INF/templates/views/results.ssp", "form" -> formParams, "htmlResponse" -> htmlResponse)
   }
 
   get("/") {
     contentType = "text/html"
-    ssp("/WEB-INF/templates/views/index.ssp", "htmlResponse" -> "")
+    ssp("/WEB-INF/templates/views/results.ssp", "form" -> ValidationForm("", Some(""), 100, false), "htmlResponse" -> "")
   }
 }

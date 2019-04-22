@@ -23,14 +23,4 @@ def filter_json_response(json_obj):
 	
 
 response_json = sys.stdin.read()
-import time
-t0= time.clock()
 filter_json_response(json.loads(response_json))
-t1 = time.clock()
-
-with open("timeelapsed.txt", "a") as file:
-	file.write("Time elapsed: " + str(t1 - t0))
-	file.write('\n')
-	file.write(str(t1))
-	file.write('\n')
-	file.write(str(t0))

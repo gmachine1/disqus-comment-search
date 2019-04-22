@@ -1,6 +1,3 @@
-<%@ val htmlResponse: String %>
-<% import org.scalatra.forms.views._ %>
-<% import org.scalatra.forms._ %>
 <html>
 <head><title>Disqus comment search</title></head>
 <body>
@@ -12,6 +9,5 @@
     Limit comments: <input type="number" name="comment_download_limit" min="100" max="100000" step="100" value="100">
     <input type="submit" value="Submit"/>
     </form>
-    <%= unescape(htmlResponse) %>
 </body>
 </html>
