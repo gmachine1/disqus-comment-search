@@ -1,16 +1,45 @@
 <%@ val form: com.gmachine1729.disqus_comment_search.ValidationForm %>
 <%@ val htmlResponse: String %>
 <html>
-<head><title>Disqus comment search</title></head>
+<head>
+<title>Disqus comment search</title>
+<link href="css/disqus-comment-search.css" rel="stylesheet" type="text/css" media="all">
+</head>
+<script>
+    function openFeedback() {
+        document.getElementById("feedback").style.visibility = "visible";
+    }
+
+    function closeFeedback() {
+        document.getElementById("feedback").style.visibility = "hidden";
+    }
+
+    function openUsage() {
+        document.getElementById("usage").style.visibility = "visible";
+    }
+
+    function closeUsage() {
+        document.getElementById("usage").style.visibility = "hidden";
+    }
+</script>
 <body>
 <h1>Disqus comment search</h1>
+<div class="topcorner">
+<div onclick="openFeedback()" class="popup-link">Feedback</div>
+<div onclick="openUsage()" class="popup-link">Usage</div>
+</div>
 <form action="/search" method="GET">
-Disqus username: <input type="text" name="username" value="<%= form.username %>"/>
-Search terms: <input type="text" name="query" value="<%= form.query %>"/>
-Require match all terms: <input type=checkbox name="match_all_terms" <%= if (form.match_all_terms) "checked" else "" %>>
-Limit comments: <input type="number" name="comment_download_limit" min="100" max="100000" step="100" value="<%= form.comment_download_limit %>">
+<label for="username">Disqus username</label>
+<input type="text" name="username" value="<%= form.username %>"/>
+<label for="query">Search terms</label> <input type="text" name="query" value="<%= form.query %>"/>
+<label for="match_all_terms">Require match all terms</label>
+<input type=checkbox name="match_all_terms" <%= if (form.match_all_terms) "checked" else "" %>>
+<label for="comment_download_limit">Limit comments</label>
+<input type="number" name="comment_download_limit" min="100" max="100000" step="100" value="<%= form.comment_download_limit %>">
     <input type="submit" value="Submit"/>
     </form>
+    <% render("feedback.ssp") %>
+    <% render("usage.ssp")%>
     <%= unescape(htmlResponse) %>
 </body>
 </html>

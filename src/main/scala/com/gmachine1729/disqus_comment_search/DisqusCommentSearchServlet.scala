@@ -3,6 +3,9 @@ package com.gmachine1729.disqus_comment_search
 import java.net.URL
 import java.util.Properties
 
+import com.gmachine1729.disqus_comment_search.db.DatabaseSessionSupport
+import com.gmachine1729.disqus_comment_search.VisitLogger
+import com.gmachine1729.disqus_comment_search.models.{Tables, Visit}
 import org.scalatra._
 import org.scalatra.scalate.ScalateSupport
 import org.scalatra.forms._
@@ -19,10 +22,11 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.sys.process._
-import scala.util.{Try,Success,Failure}
+import scala.util.{Failure, Success, Try}
 
 
-class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport with FormSupport with I18nSupport {
+class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport with FormSupport with I18nSupport with SessionSupport
+  with DatabaseSessionSupport {
   val API_KEY = "E8Uh5l5fHZ6gD8U3KycjAIAk46f68Zw7C6eW8WSjZvCLXebZ7p0r1yrYDrLilk2F"
   val BASE_URL = "https://disqus.com/api/3.0/timelines/activities"
   val MIN_LIMIT: Integer = 5
@@ -137,13 +141,48 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
     Math.max(MIN_LIMIT, Math.min(MAX_LIMIT, (remainingNumComments / estimatedActualToLimitParamRatio).toInt))
   }
 
+  post("/feedback") {
+    val form = mapping(
+      "name" -> label("Name", text(required, maxlength(100))),
+      "email" -> label("Email", optional(text(pattern(".+@.+"), maxlength(40)))),
+      "message" -> label("Message", text(required, maxlength(100000)))
+    )(FeedbackForm.apply)
+    val visitFuture: Future[Visit] = VisitLogger.genVisitRecord(request, VisitLogger.VisitType.FEEDBACK.id)
+
+    def submitFeedback(feedbackFormValidated: FeedbackForm): String = {
+      Future {
+        val visit = Await.result(visitFuture, Duration.Inf)
+        visit.name = Some(feedbackFormValidated.name)
+        visit.email = feedbackFormValidated.email
+        visit.message = Some(feedbackFormValidated.message)
+        Visit.create(visit)
+        println("logged feedback visit to db")
+      }
+      "Feedback successfully submitted, you might get a response from the creator of Disqus comment search."
+    }
+
+    def formErrorToHtmlResponse(hasErrors: Seq[(String, String)]): String = {
+      val errorMsg = hasErrors.map(_._2).fold("")(_ ++ "<br>" ++ _)
+      errorMsg
+    }
+    ssp("/WEB-INF/templates/views/feedback.ssp", "feedbackSubmissionResponse" -> validate(form)(formErrorToHtmlResponse, submitFeedback))
+  }
+
   get("/search") {
+    val visitFuture: Future[Visit] = VisitLogger.genVisitRecord(request, VisitLogger.VisitType.SEARCH.id)
+
     def formToHtmlResponse(validatedForm: ValidationForm): (ValidationForm, String) = {
       val username = validatedForm.username
       val query = validatedForm.query.getOrElse("").toLowerCase
       val commentDownloadLimit = validatedForm.comment_download_limit
       val matchAllTerms = validatedForm.match_all_terms
       if (!usernameExists(username)) {
+        Future {
+          val visit = Await.result(visitFuture, Duration.Inf)
+          visit.setFormParameters(validatedForm)
+          Visit.create(visit)
+          println("logged no username visit to db")
+        }
         (validatedForm, String.format ("<div>Did not find any Disqus user with username <b>%s</b></div>", username))
       } else {
         val cursor: String = ""
@@ -154,11 +193,24 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
         val t3 = System.nanoTime ()
         val secondsTaken2 = (t3 - t2) / 1000000000.0
         System.out.println ("total time: " + secondsTaken2)
+        Future {
+          val visit = Await.result(visitFuture, Duration.Inf)
+          visit.setFormParameters(validatedForm)
+          visit.foundUser = true
+          visit.numResults = Some(accumComments.length)
+          Visit.create(visit)
+          println("logged returned results visit to db")
+        }
         (validatedForm, res)
       }
     }
 
     def formErrorToHtmlResponse(hasErrors: Seq[(String, String)]): (ValidationForm, String) = {
+      Future {
+        val visit = Await.result(visitFuture, Duration.Inf)
+        Visit.create(visit)
+        println("logged form validation error visit to db")
+      }
       val limit = Try(params("comment_download_limit").toInt) match {
         case Success(value) => value
         case _ => 100
@@ -181,6 +233,12 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
 
   get("/") {
     contentType = "text/html"
+    val visitFuture: Future[Visit] = VisitLogger.genVisitRecord(request, VisitLogger.VisitType.HOME_PAGE.id)
+    val _ = Future {
+      val visit = Await.result(visitFuture, Duration.Inf)
+      Visit.create(Await.result(visitFuture, Duration.Inf))
+      println("logged visit to db")
+    }
     ssp("/WEB-INF/templates/views/results.ssp", "form" -> ValidationForm("", Some(""), 100, false), "htmlResponse" -> "")
   }
 }

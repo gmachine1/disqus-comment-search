@@ -1,9 +1,15 @@
-import com.gmachine1729.disqus_comment_search._
-import org.scalatra._
+import org.scalatra.LifeCycle
 import javax.servlet.ServletContext
+import com.gmachine1729.disqus_comment_search.DisqusCommentSearchServlet
+import com.gmachine1729.disqus_comment_search.db.DatabaseInit
 
-class ScalatraBootstrap extends LifeCycle {
+class ScalatraBootstrap extends LifeCycle with DatabaseInit {
   override def init(context: ServletContext) {
-    context.mount(new DisqusCommentSearchServlet, "/*")
+    configureDb()
+    context mount (new DisqusCommentSearchServlet, "/*")
+  }
+
+  override def destroy(context:ServletContext) {
+    closeDbConnection()
   }
 }

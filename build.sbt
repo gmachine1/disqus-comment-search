@@ -26,6 +26,12 @@ libraryDependencies ++= Seq(
   "edu.stanford.nlp" % "stanford-corenlp" % "3.9.1"
 )
 
+libraryDependencies ++= Seq(
+  "org.squeryl" %% "squeryl" % "0.9.5-7",
+  "c3p0" % "c3p0" % "0.9.1.2",
+  "mysql" % "mysql-connector-java" % "8.0.15"
+)
+
 javaOptions ++= Seq(
   "-Xdebug",
   "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"

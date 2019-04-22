@@ -1,0 +1,18 @@
+<% val feedbackSubmissionResponse: String = "" %>
+<div class="popup" id="feedback">
+<form action="/feedback" method="POST", >
+<label for="name"><b>Name</b></label>
+<input type="text" placeholder="Name" name="name" required>
+<br>
+<label for="email"><b>Email</b></label>
+<input type="text" placeholder="Email" name="email" required>
+<br>
+<label for="message"><b>Message</b></label>
+<br>
+<textarea placeholder="Message" name="message" cols="100" rows="20" required></textarea>/
+<br>
+    <button type="submit">Submit</button>
+    <button type="button" onclick="closeFeedback()">Close</button>
+</form>
+<%= unescape(feedbackSubmissionResponse) %>
+</div>

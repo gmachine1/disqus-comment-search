@@ -1,8 +1,10 @@
 package com.gmachine1729.disqus_comment_search
 
-import upickle.default.{ReadWriter => RW, macroRW}
+import upickle.default.{macroRW, ReadWriter => RW}
 import scalatags.Text.all._
 import java.text.SimpleDateFormat
+
+import scala.util.Try
 
 case class Cursor(next: String)
 object Cursor {
@@ -27,15 +29,10 @@ case class Comment(message: String, author: Author, createdAt: String, url: Stri
   }
 
   def compare(other: Comment): Int = {
-    try {
+    Try {
       if (parser.parse(createdAt).getTime - parser.parse(other.createdAt).getTime > 0) -1
       else 1
-    } catch {
-      case e => {
-        e.printStackTrace()
-        -1
-      }
-    }
+    }.getOrElse(-1)
   }
 }
 object Comment {
