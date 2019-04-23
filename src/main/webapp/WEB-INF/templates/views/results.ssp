@@ -4,10 +4,12 @@
 <head>
 <title>Disqus comment search</title>
 <link href="css/disqus-comment-search.css" rel="stylesheet" type="text/css" media="all">
+<script type="text/javascript" src="js/jquery-3.4.0.min.js"></script>
 </head>
 <script>
     function openFeedback() {
         document.getElementById("feedback").style.visibility = "visible";
+        document.getElementById("usage").style.visibility = "hidden";
     }
 
     function closeFeedback() {
@@ -16,13 +18,36 @@
 
     function openUsage() {
         document.getElementById("usage").style.visibility = "visible";
+        document.getElementById("feedback").style.visibility = "hidden";
     }
 
     function closeUsage() {
         document.getElementById("usage").style.visibility = "hidden";
     }
+
+    $(function(){
+        $('#feedback_submit').click(function(){
+            //$('#container').append('loading');
+            //var sthis = $('#sthis').val();
+            var name = $('#name').val();
+            var email = $('#email').val();
+            var message = $('#message').val();
+            $.ajax({
+                url: 'feedback' ,
+                type: 'POST',
+                data: { name: name, email: email, message: message },
+                success: function(result){
+                    alert(result)
+                }
+            });
+            return false;
+        });
+    });
 </script>
 <body>
+<div class="topcenter">
+<div><a href="http://gmachine1729.com">gmachine1729</a> © 2019</div>
+</div>
 <h1>Disqus comment search</h1>
 <div class="topcorner">
 <div onclick="openFeedback()" class="popup-link">Feedback</div>
@@ -31,7 +56,7 @@
 <form action="/search" method="GET">
 <label for="username">Disqus username</label>
 <input type="text" name="username" value="<%= form.username %>"/>
-<label for="query">Search terms</label> <input type="text" name="query" value="<%= form.query %>"/>
+<label for="query">Search terms</label> <input type="text" name="query" size="40" value="<%= form.query %>"/>
 <label for="match_all_terms">Require match all terms</label>
 <input type=checkbox name="match_all_terms" <%= if (form.match_all_terms) "checked" else "" %>>
 <label for="comment_download_limit">Limit comments</label>

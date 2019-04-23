@@ -4,16 +4,26 @@
     right: 10px;
  }
 
+.topcenter {
+    position: absolute; /* or absolute */
+    top: 5px;
+    left: 50%;
+    transform: translate(-50%, 0%);
+    border: 3px solid #f1f1f1;
+    padding: 5px 5px 5px 5px;
+}
+
 /* The popup form - hidden by default */
 .popup {
     visibility: hidden;
     position: fixed;
-    top: 15px;
-    right: 0;
-    width: 50%;
+    top: 120px;
+    right: 10px;
+    width: 40%;
     border: 3px solid #f1f1f1;
     z-index: 1;
     background-color: white;
+    padding: 10px 10px 10px 10px;
 }
 
 .popup-link {
