@@ -9,9 +9,9 @@ import org.slf4j.LoggerFactory
 trait DatabaseInit {
   val logger = LoggerFactory.getLogger(getClass)
 
-  val databaseUsername = "root"
-  val databasePassword = ""
-  val databaseConnection = "jdbc:mysql://localhost:3306/disqus_comment_search"
+  val databaseUsername = "gmachine1729"
+  val databasePassword = "12345678"
+  val databaseConnection = "jdbc:mysql://aa37a2l8w9unoo.cexhgpvvqwnd.us-east-1.rds.amazonaws.com:3306/disqus_comment_search"
 
   var cpds = new ComboPooledDataSource
 
