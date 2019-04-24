@@ -91,7 +91,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
     }
 
     def commentsHtml: String = {
-      val filteredCommentBatch = time("Searched through comments"){
+      val filteredCommentBatch = time(String.format("Searched through %d comments", new Integer(commentsResponse.response.objects.size))){
         Await.result[Seq[Comment]](commentBatch, Duration.Inf)
       }
       accumComments.appendAll(filteredCommentBatch)

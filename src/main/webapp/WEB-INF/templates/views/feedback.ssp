@@ -1,10 +1,10 @@
 <div class="popup" id="feedback">
 <form onsubmit="return false">
 <label for="name"><b>Name</b></label>
-<input type="text" id="name" placeholder="Name" name="name" size="18" required>
+<input type="text" id="name" placeholder="Name" name="name" size="25" required>
 <br>
 <label for="email"><b>Email</b></label>
-<input type="text" id="email" placeholder="Email" name="email" size="25" required>
+<input type="text" id="email" placeholder="Email" name="email" size="35" required>
 <br>
 <label for="message"><b>Message</b></label>
 <br>

@@ -20,7 +20,10 @@ class Visit(val id: Long, val timestamp: Timestamp, var ip: Option[String],
   def setFormParameters(form: ValidationForm): Unit = {
     formValidated = true
     username = Some(form.username)
-    query = form.query
+    query = form.query match {
+      case None => Some("")
+      case _    => form.query
+    }
     matchAll = Some(form.match_all_terms)
     commentDownloadLimit = Some(form.comment_download_limit)
   }
@@ -45,7 +48,8 @@ object Tables extends Schema {
   val visits = table[Visit]
 
   on(visits)(v => declare(
-    v.id is (autoIncremented)
+    v.id is (autoIncremented),
+    v.message is (dbType("text"))
   ))
 }
 
