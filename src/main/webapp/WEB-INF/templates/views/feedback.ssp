@@ -1,5 +1,6 @@
 <div class="popup" id="feedback">
 <form onsubmit="return false">
+<p>Alternatively, you can email me at gmachine1729 at foxmail.com</p>
 <label for="name"><b>Name</b></label>
 <input type="text" id="name" placeholder="Name" name="name" size="25" required>
 <br>
