@@ -1,5 +1,4 @@
 <%@ val form: com.gmachine1729.disqus_comment_search.ValidationForm %>
-<%@ val htmlResponse: String %>
 <html>
 <head>
 <title>Disqus comment search</title>

@@ -180,6 +180,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
     implicit val out: PrintWriter = response.writer
 
     def formToHtmlResponse(validatedForm: ValidationForm): (ValidationForm, Unit) = {
+      out.write(ssp("/WEB-INF/templates/views/results.ssp", "form" -> validatedForm))
       val username = validatedForm.username
       val query = validatedForm.query.getOrElse("").toLowerCase
       val commentDownloadLimit = validatedForm.comment_download_limit
@@ -220,9 +221,10 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
         case _ => 1000
       }
       val validationForm = ValidationForm(params("username"), Some(params("query")), limit, params("comment_download_limit").equals("on"))
+      out.write(ssp("/WEB-INF/templates/views/results.ssp", "form" -> validationForm))
       val errorMsg = hasErrors.map(_._2).fold("")(_ ++ "<br>" ++ _)
       (validationForm, {
-        out.println(errorMsg)
+        out.write(errorMsg)
         out.flush()
       })
     }
@@ -234,7 +236,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
       "match_all_terms" -> label("Require match all terms", boolean())
     )(ValidationForm.apply)
     validate(form)(formErrorToHtmlResponse, formToHtmlResponse)
-    //ssp("/WEB-INF/templates/views/results.ssp", "form" -> formParams, "htmlResponse" -> htmlResponse)
+    //ssp("/WEB-INF/templates/views/results.ssp", "form" -> formParams)
   }
 
   get("/") {
