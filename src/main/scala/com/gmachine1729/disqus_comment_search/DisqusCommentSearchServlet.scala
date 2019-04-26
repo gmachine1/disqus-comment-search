@@ -1,5 +1,6 @@
 package com.gmachine1729.disqus_comment_search
 
+import java.io.PrintWriter
 import java.net.URL
 import java.util.Properties
 
@@ -69,18 +70,24 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
     }
   }
 
-  def downloadComments(username: String, searchTermsLemmatized: Set[String], limitParam: Int, commentDownloadLimit: Int, matchAllTerms: Boolean)(
-      cursor: String, numDownloaded: Int, accumComments: ArrayBuffer[Comment], prevCommentBatch: Option[Future[Seq[Comment]]]): String = {
+  def downloadComments(username: String, numAccumResults: Int, searchTermsLemmatized: Set[String], limitParam: Int, commentDownloadLimit: Int, matchAllTerms: Boolean)(
+      cursor: String, numDownloaded: Int,  prevCommentBatch: Option[Future[Seq[Comment]]])(implicit output: PrintWriter): Int = {
     val url = getUrl(username, cursor, limitParam)
     val filteredJson = time(String.format("Retrieved from %s", url)) {
       (new URL(url) #> String.format("python src/main/python/filter_json_response.py %s", username)).!!
     }
+    var numAccumResultsUpdated = numAccumResults
     prevCommentBatch match {
       case Some(future) => {
         val filteredCommentBatch = time("Waited to search through comments") {
           Await.result[Seq[Comment]](future, Duration.Inf)
         }
-        accumComments.appendAll(filteredCommentBatch)
+        for (comment <- filteredCommentBatch.sorted) {
+          output.println(comment.toHtml)
+          output.println("<hr>")
+          output.flush()
+        }
+        numAccumResultsUpdated = numAccumResults + filteredCommentBatch.length
       }
       case None =>
     }
@@ -90,29 +97,28 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
         commentsResponse.response.objects.map(_._2).filter(comment => containsSearchTerms(searchTermsLemmatized, matchAllTerms)(comment) > 0).toSeq
     }
 
-    def commentsHtml: String = {
+    def processFinalBatch: Int = {
       val filteredCommentBatch = time(String.format("Searched through %d comments", new Integer(commentsResponse.response.objects.size))){
         Await.result[Seq[Comment]](commentBatch, Duration.Inf)
       }
-      accumComments.appendAll(filteredCommentBatch)
-      val htmlResponse = new StringBuffer(String.format("<h4><b>%d</b> results</h4><hr>", new Integer(accumComments.length)))
-      for (comment <- accumComments.sorted) {
-        htmlResponse.append(comment.toHtml)
-        htmlResponse.append("<hr>")
+      for (comment <- filteredCommentBatch.sorted) {
+        output.println(comment.toHtml)
+        output.println("<hr>")
+        output.flush()
       }
-      htmlResponse.toString
+      numAccumResultsUpdated + filteredCommentBatch.length
     }
 
     commentsResponse.cursor.next match {
-      case null       => commentsHtml
+      case null       => processFinalBatch
       case cursorNext => {
         val numDownloadedUpdated = numDownloaded + commentsResponse.response.objects.size
         val remainingNumComments = commentDownloadLimit - numDownloadedUpdated
         if (remainingNumComments > 0)
-          downloadComments(username, searchTermsLemmatized, getDisqusLimitParam(remainingNumComments), commentDownloadLimit, matchAllTerms)(
-            cursorNext, numDownloadedUpdated, accumComments, Some(commentBatch))
+          downloadComments(username, numAccumResultsUpdated, searchTermsLemmatized, getDisqusLimitParam(remainingNumComments), commentDownloadLimit, matchAllTerms)(
+            cursorNext, numDownloadedUpdated, Some(commentBatch))
         else
-          commentsHtml
+          processFinalBatch
       }
     }
   }
@@ -167,7 +173,13 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
     val startTime = System.currentTimeMillis()
     val visitFuture: Future[Visit] = VisitLogger.genVisitRecord(request, VisitLogger.VisitType.SEARCH.id)
 
-    def formToHtmlResponse(validatedForm: ValidationForm): (ValidationForm, String) = {
+    response.setHeader("Content-Type", "text/html")
+    response.setHeader("Transfer-Encoding", "chunked")
+    response.setStatus(200)
+
+    implicit val out: PrintWriter = response.writer
+
+    def formToHtmlResponse(validatedForm: ValidationForm): (ValidationForm, Unit) = {
       val username = validatedForm.username
       val query = validatedForm.query.getOrElse("").toLowerCase
       val commentDownloadLimit = validatedForm.comment_download_limit
@@ -182,23 +194,22 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
         (validatedForm, String.format ("<div>Did not find any Disqus user with username <b>%s</b></div>", username))
       } else {
         val cursor: String = ""
-        val accumComments: ArrayBuffer[Comment] = new ArrayBuffer[Comment] (100)
-        val searchResults = downloadComments (username, getQueryTokens (query), getDisqusLimitParam (commentDownloadLimit), commentDownloadLimit, matchAllTerms) (
-          cursor, 0, accumComments, None)
+        val numSearchResults = downloadComments (username, 0, getQueryTokens (query), getDisqusLimitParam (commentDownloadLimit), commentDownloadLimit, matchAllTerms) (
+          cursor, 0, None)
         Future {
           val visit = Await.result(visitFuture, Duration.Inf)
           visit.setFormParameters(validatedForm)
           visit.foundUser = true
-          visit.numResults = Some(accumComments.length)
+          visit.numResults = Some(numSearchResults)
           visit.latency = Some((System.currentTimeMillis() - startTime)/1000.0)
           Visit.create(visit)
           logger.info("wrote returned search results visit to db")
         }
-        (validatedForm, searchResults)
+        (validatedForm, {})
       }
     }
 
-    def formErrorToHtmlResponse(hasErrors: Seq[(String, String)]): (ValidationForm, String) = {
+    def formErrorToHtmlResponse(hasErrors: Seq[(String, String)]): (ValidationForm, Unit) = {
       Future {
         val visit = Await.result(visitFuture, Duration.Inf)
         Visit.create(visit)
@@ -206,11 +217,14 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
       }
       val limit = Try(params("comment_download_limit").toInt) match {
         case Success(value) => value
-        case _ => 100
+        case _ => 1000
       }
       val validationForm = ValidationForm(params("username"), Some(params("query")), limit, params("comment_download_limit").equals("on"))
       val errorMsg = hasErrors.map(_._2).fold("")(_ ++ "<br>" ++ _)
-      (validationForm, errorMsg)
+      (validationForm, {
+        out.println(errorMsg)
+        out.flush()
+      })
     }
 
     val form = mapping(
@@ -219,9 +233,8 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
       "comment_download_limit" -> label("Comment Download Limit", number()),
       "match_all_terms" -> label("Require match all terms", boolean())
     )(ValidationForm.apply)
-    val (formParams, htmlResponse) = validate(form)(formErrorToHtmlResponse, formToHtmlResponse)
-    contentType = "text/html"
-    ssp("/WEB-INF/templates/views/results.ssp", "form" -> formParams, "htmlResponse" -> htmlResponse)
+    validate(form)(formErrorToHtmlResponse, formToHtmlResponse)
+    //ssp("/WEB-INF/templates/views/results.ssp", "form" -> formParams, "htmlResponse" -> htmlResponse)
   }
 
   get("/") {
