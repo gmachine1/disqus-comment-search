@@ -31,8 +31,8 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
   val logger = LoggerFactory.getLogger(getClass)
   val API_KEY = "E8Uh5l5fHZ6gD8U3KycjAIAk46f68Zw7C6eW8WSjZvCLXebZ7p0r1yrYDrLilk2F"
   val BASE_URL = "https://disqus.com/api/3.0/timelines/activities"
-  val MIN_LIMIT: Integer = 10
-  val MAX_LIMIT: Integer = 100
+  //val MIN_LIMIT: Integer = 10
+  val DEFAULT_LIMIT: Integer = 10
   val props = new Properties()
   props.put("annotators", "tokenize, ssplit, pos, lemma")
   val pipeline = new StanfordCoreNLP(props)
@@ -138,7 +138,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
   val estimatedActualToLimitParamRatio: Float = 2.5.toFloat
 
   private def getDisqusLimitParam(remainingNumComments: Int): Int = {
-    Math.max(MIN_LIMIT, Math.min(MAX_LIMIT, (remainingNumComments / estimatedActualToLimitParamRatio).toInt))
+    Math.min(DEFAULT_LIMIT, remainingNumComments)
   }
 
   post("/feedback") {
@@ -246,6 +246,6 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
       Visit.create(Await.result(visitFuture, Duration.Inf))
       logger.info("wrote home page visit to db")
     }
-    ssp("/WEB-INF/templates/views/results.ssp", "form" -> ValidationForm("", Some(""), 100, false), "htmlResponse" -> "")
+    ssp("/WEB-INF/templates/views/results.ssp", "form" -> ValidationForm("", Some(""), 1000, false), "htmlResponse" -> "")
   }
 }

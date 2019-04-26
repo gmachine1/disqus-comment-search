@@ -23,6 +23,45 @@
     function closeUsage() {
         document.getElementById("usage").style.visibility = "hidden";
     }
+
+    $(function(){
+        $('#feedback_submit').click(function(){
+            var name = $('#name').val();
+            var email = $('#email').val();
+            var message = $('#message').val();
+            $.ajax({
+                url: 'feedback' ,
+                type: 'POST',
+                data: { name: name, email: email, message: message },
+                success: function(result){
+                    alert(result)
+                }
+            });
+            return false;
+        });
+    });
+
+    $(function(){
+        $('#search_submit').click(function(){
+            var username = $('input[name=username]').val();
+            var query = $('input[name=query]').val();
+            var comment_download_limit = $('input[name=comment_download_limit]').val();
+            var match_all_terms = $('input[name=match_all_terms]').val();
+            $.ajax({
+                xhr: function() {
+                    var xhr = $.ajaxSettings.xhr();
+                    xhr.onprogress = function(evt) {
+                        $('html').html(xhr.responseText);
+                    }
+                    return xhr;
+                },
+                url: 'search' ,
+                type: 'GET',
+                data: { username: username, query: query, comment_download_limit: comment_download_limit, match_all_terms: match_all_terms },
+            })
+            return false;
+        });
+    });
 </script>
 <body>
 <div class="topcenter">
@@ -33,7 +72,7 @@
 <div onclick="openFeedback()" class="popup-link">Feedback</div>
 <div onclick="openUsage()" class="popup-link">Usage</div>
 </div>
-<form action="/search" method="GET">
+<form action="/search" method="GET" onsubmit="return false">
 <label for="username">Disqus username</label>
 <input type="text" name="username" value="<%= form.username %>"/>
 <label for="query">Search terms</label> <input type="text" name="query" size="40" value="<%= form.query %>"/>
@@ -41,7 +80,7 @@
 <input type=checkbox name="match_all_terms" <%= if (form.match_all_terms) "checked" else "" %>>
 <label for="comment_download_limit">Limit comments</label>
 <input type="number" name="comment_download_limit" min="100" max="100000" step="100" value="<%= form.comment_download_limit.toString %>">
-<input type="submit" value="Submit"/>
+<input id="search_submit" type="submit" value="Submit"/>
 </form>
 <% render("feedback.ssp") %>
 <% render("usage.ssp") %>
