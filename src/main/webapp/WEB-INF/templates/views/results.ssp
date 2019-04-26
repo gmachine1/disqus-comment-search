@@ -60,7 +60,7 @@
 <label for="match_all_terms">Require match all terms</label>
 <input type=checkbox name="match_all_terms" <%= if (form.match_all_terms) "checked" else "" %>>
 <label for="comment_download_limit">Limit comments</label>
-<input type="number" name="comment_download_limit" min="100" max="100000" step="100" value="<%= form.comment_download_limit %>">
+<input type="number" name="comment_download_limit" min="100" max="100000" step="100" value="<%= form.comment_download_limit.toString %>">
     <input type="submit" value="Submit"/>
     </form>
     <% render("feedback.ssp") %>

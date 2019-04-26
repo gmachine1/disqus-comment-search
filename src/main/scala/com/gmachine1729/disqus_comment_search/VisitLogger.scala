@@ -9,7 +9,7 @@ import scalaj.http._
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Try
+import scala.util.{Success, Try}
 
 case class GeoLocation(city: String, country: String, isp: String, region: String)
 object GeoLocation {
@@ -46,12 +46,14 @@ object VisitLogger {
       visit.visitType = visitType
       visit.ip = Some(ip)
       visit.referrer = referer
-      Try {
-        val geoLocation = read[GeoLocation](Http(String.format("http://ip-api.com/json/%s", ip)).asString.body)
-        visit.city = Some(geoLocation.city)
-        visit.province = Some(geoLocation.region)
-        visit.country = Some(geoLocation.country)
-        visit.isp = Some(geoLocation.isp)
+      Try(read[GeoLocation](Http(String.format("http://ip-api.com/json/%s", ip)).asString.body)) match {
+        case Success(geoLocation) => {
+          visit.city = Some(geoLocation.city)
+          visit.province = Some(geoLocation.region)
+          visit.country = Some(geoLocation.country)
+          visit.isp = Some(geoLocation.isp)
+        }
+        case _ =>
       }
       visit
     }
