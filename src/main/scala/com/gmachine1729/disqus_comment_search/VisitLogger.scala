@@ -3,13 +3,14 @@ package com.gmachine1729.disqus_comment_search
 
 import com.gmachine1729.disqus_comment_search.models.Visit
 import javax.servlet.http.HttpServletRequest
+import org.slf4j.LoggerFactory
 import upickle.default.{macroRW, ReadWriter => RW}
 import upickle.default._
 import scalaj.http._
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 case class GeoLocation(city: String, country: String, isp: String, region: String)
 object GeoLocation {
@@ -53,7 +54,9 @@ object VisitLogger {
           visit.country = Some(geoLocation.country)
           visit.isp = Some(geoLocation.isp)
         }
-        case _ =>
+        case Failure(exception) => {
+          LoggerFactory.getLogger(getClass).warn(exception.getMessage)
+        }
       }
       visit
     }
