@@ -83,8 +83,8 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
           Await.result[Seq[Comment]](future, Duration.Inf)
         }
         for (comment <- filteredCommentBatch.sorted) {
-          output.println(comment.toHtml)
-          output.println("<hr>")
+          output.write(comment.toHtml)
+          output.write("<hr>")
           output.flush()
         }
         numAccumResultsUpdated = numAccumResults + filteredCommentBatch.length
@@ -102,8 +102,8 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
         Await.result[Seq[Comment]](commentBatch, Duration.Inf)
       }
       for (comment <- filteredCommentBatch.sorted) {
-        output.println(comment.toHtml)
-        output.println("<hr>")
+        output.write(comment.toHtml)
+        output.write("<hr>")
         output.flush()
       }
       numAccumResultsUpdated + filteredCommentBatch.length
@@ -180,7 +180,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
     implicit val out: PrintWriter = response.writer
 
     def formToHtmlResponse(validatedForm: ValidationForm): (ValidationForm, Unit) = {
-      out.write(ssp("/WEB-INF/templates/views/results.ssp", "form" -> validatedForm))
+      out.write("<h4><span id='num_results'>0</span> results</h4>")
       val username = validatedForm.username
       val query = validatedForm.query.getOrElse("").toLowerCase
       val commentDownloadLimit = validatedForm.comment_download_limit
@@ -221,7 +221,6 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
         case _ => 1000
       }
       val validationForm = ValidationForm(params("username"), Some(params("query")), limit, params("comment_download_limit").equals("on"))
-      out.write(ssp("/WEB-INF/templates/views/results.ssp", "form" -> validationForm))
       val errorMsg = hasErrors.map(_._2).fold("")(_ ++ "<br>" ++ _)
       (validationForm, {
         out.write(errorMsg)

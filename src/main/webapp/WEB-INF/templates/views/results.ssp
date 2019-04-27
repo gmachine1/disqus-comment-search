@@ -51,7 +51,8 @@
                 xhr: function() {
                     var xhr = $.ajaxSettings.xhr();
                     xhr.onprogress = function(evt) {
-                        $('html').html(xhr.responseText);
+                        $('#search_results').html(xhr.responseText);
+                        $('#num_results').text($('.result_comment').length);
                     }
                     return xhr;
                 },
@@ -84,5 +85,6 @@
 </form>
 <% render("feedback.ssp") %>
 <% render("usage.ssp") %>
+<div id="search_results"></div>
 </body>
 </html>

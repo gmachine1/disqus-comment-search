@@ -25,7 +25,7 @@ case class Comment(message: String, author: Author, createdAt: String, url: Stri
   val parser = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 
   def toHtml: String = {
-    div(h4(a(href:=url)(createdAt.substring(0, 10) ++ " on " ++ forum)), raw(message)).toString()
+    div(`class`:="result_comment")(h4(a(href:=url)(createdAt.substring(0, 10) ++ " on " ++ forum)), raw(message)).toString()
   }
 
   def compare(other: Comment): Int = {
