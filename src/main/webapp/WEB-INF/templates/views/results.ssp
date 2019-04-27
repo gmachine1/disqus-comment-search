@@ -45,11 +45,10 @@
         return $('.result_comment').length;
     }
 
+    var pendingXhr = [];
+
     $(function(){
         $('#search_submit').click(function(){
-            $('#num_results').text(numResultsSoFar());
-            $('#search_progress').show();
-
             var username = $('input[name=username]').val();
             var query = $('input[name=query]').val();
             var comment_download_limit = $('input[name=comment_download_limit]').val();
@@ -59,12 +58,22 @@
                 xhr: function() {
                     var xhr = $.ajaxSettings.xhr();
                     xhr.onprogress = function(evt) {
-                        if (xhr.readyState == 3)
-                            $('#search_results').html(xhr.responseText);
-                            $('#num_results').html(numResultsSoFar());
+                        $('#search_results').html(xhr.responseText);
+                        $('#num_results').html(numResultsSoFar());
                         return false;
                     }
                     return xhr;
+                },
+                beforeSend: function(xhr) {
+                    $.each(pendingXhr, function(i, xhr) {
+                        xhr.abort();
+                    });
+                    pendingXhr.push(xhr);
+                    $('#search_results').html('');
+                    $('#progress_info').html("Loading results... (<span id='num_results'></span> results)");
+                    $('#num_results').text(numResultsSoFar());
+                    $('.loader').show();
+                    $('#search_progress').show();
                 },
                 url: 'search',
                 type: 'GET',
@@ -100,10 +109,10 @@
 <% render("feedback.ssp") %>
 <% render("usage.ssp") %>
 <div id="search_progress" style="display:none;">
-<table cellspacing="10">
+<table>
     <tbody>
-    <tr><td><b id='progress_info'>Loading results...
-    (<span id='num_results'></span> results)</b></td>
+    <tr><td><b id='progress_info'></b></td>
+    <td></td>
     <td><div class='loader'></div></td></tr>
     </tbody>
 </table>
