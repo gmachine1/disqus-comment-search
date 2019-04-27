@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory
 import scalaj.http.Http
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -180,8 +179,6 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
     implicit val out: PrintWriter = response.writer
 
     def formToHtmlResponse(validatedForm: ValidationForm): (ValidationForm, Unit) = {
-      out.write("<h4 id='progress_info'>Loading results... (<span id='num_results'></span> results) <canvas class='loader'></canvas></h4><hr>")
-      out.flush()
       val username = validatedForm.username
       val query = validatedForm.query.getOrElse("").toLowerCase
       val commentDownloadLimit = validatedForm.comment_download_limit

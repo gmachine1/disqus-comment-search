@@ -1,14 +1,12 @@
 <div class="popup" id="usage">
-<p>This is for searching comments of a specific Disqus user. This first version is very minimal and because the Disqus API is somewhat high latency, results can take
-10+ seconds or even a minute (depending on number of comments downloaded) to appear. This tool (including its UI/css) will be enhanced from time to time.</p>
-<p>Some notes</p>
+<p>Search Disqus comments by username and words. Some notes below.</p>
 <ul style="list-style-type:disc;">
-<li><b>Disqus username</b> is case sensitive.</li>
-<li>If the <b>require match all</b> checkbox is checked, only comments which contain all search terms in query will appear in results.
-Otherwise any comment containing any of the search terms will appear in result.</li>
-<li>No terms in the query means all comments will appear in results.</li>
-<li>The <b>limit</b> parameter limits to <b>[LIMIT]</b> latest comments of user (so that it doesn't take too long to return results).
-Set it very high (past the user's number of comments) to download everything.</li>
+    <li><b>Disqus username</b> is case sensitive. As an example, the username for <a href="https://disqus.com/by/BobSykes/">https://disqus.com/by/BobSykes/</a> would be "BobSykes"</li>
+    <li>If the <b>require match all</b> checkbox is checked, only comments which contain all search terms in query will appear in results.
+    Otherwise any comment containing any of the search terms will appear in result.</li>
+    <li>No terms in the query means all comments will appear in results.</li>
+    <li>The <b>limit</b> parameter limits to <b>[LIMIT]</b> latest comments of user (so that it doesn't return too many results).
+    Set it very high (past the user's number of comments) to download everything.</li>
 </ul>
 <button type="button" onclick="closeUsage()">Close</button>
 </div>

@@ -47,10 +47,14 @@
 
     $(function(){
         $('#search_submit').click(function(){
+            $('#num_results').text(numResultsSoFar());
+            $('#search_progress').show();
+
             var username = $('input[name=username]').val();
             var query = $('input[name=query]').val();
             var comment_download_limit = $('input[name=comment_download_limit]').val();
             var match_all_terms = $('input[name=match_all_terms]').val();
+
             $.ajax({
                 xhr: function() {
                     var xhr = $.ajaxSettings.xhr();
@@ -62,11 +66,12 @@
                     }
                     return xhr;
                 },
-                url: 'search' ,
+                url: 'search',
                 type: 'GET',
                 data: { username: username, query: query, comment_download_limit: comment_download_limit, match_all_terms: match_all_terms },
                 success: function(result) {
                     $('#progress_info').html('Done! (' + numResultsSoFar() + ' results) &#10004;');
+                    $('.loader').hide();
                 }
             })
             return false;
@@ -94,6 +99,16 @@
 </form>
 <% render("feedback.ssp") %>
 <% render("usage.ssp") %>
+<div id="search_progress" style="display:none;">
+<table cellspacing="10">
+    <tbody>
+    <tr><td><b id='progress_info'>Loading results...
+    (<span id='num_results'></span> results)</b></td>
+    <td><div class='loader'></div></td></tr>
+    </tbody>
+</table>
+<hr>
+</div>
 <div id="search_results"></div>
 </body>
 </html>
