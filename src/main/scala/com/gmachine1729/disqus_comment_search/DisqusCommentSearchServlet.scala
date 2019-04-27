@@ -180,7 +180,8 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
     implicit val out: PrintWriter = response.writer
 
     def formToHtmlResponse(validatedForm: ValidationForm): (ValidationForm, Unit) = {
-      out.write("<h4><span id='num_results'>0</span> results</h4>")
+      out.write("<h4 id='progress_info'>Loading results... (<span id='num_results'></span> results) <canvas class='loader'></canvas></h4><hr>")
+      out.flush()
       val username = validatedForm.username
       val query = validatedForm.query.getOrElse("").toLowerCase
       val commentDownloadLimit = validatedForm.comment_download_limit

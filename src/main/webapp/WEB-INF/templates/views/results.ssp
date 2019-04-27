@@ -41,6 +41,10 @@
         });
     });
 
+    function numResultsSoFar() {
+        return $('.result_comment').length;
+    }
+
     $(function(){
         $('#search_submit').click(function(){
             var username = $('input[name=username]').val();
@@ -51,14 +55,19 @@
                 xhr: function() {
                     var xhr = $.ajaxSettings.xhr();
                     xhr.onprogress = function(evt) {
-                        $('#search_results').html(xhr.responseText);
-                        $('#num_results').text($('.result_comment').length);
+                        if (xhr.readyState == 3)
+                            $('#search_results').html(xhr.responseText);
+                            $('#num_results').html(numResultsSoFar());
+                        return false;
                     }
                     return xhr;
                 },
                 url: 'search' ,
                 type: 'GET',
                 data: { username: username, query: query, comment_download_limit: comment_download_limit, match_all_terms: match_all_terms },
+                success: function(result) {
+                    $('#progress_info').html('Done! (' + numResultsSoFar() + ' results) &#10004;');
+                }
             })
             return false;
         });
