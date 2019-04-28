@@ -52,7 +52,7 @@
             var username = $('input[name=username]').val();
             var query = $('input[name=query]').val();
             var comment_download_limit = $('input[name=comment_download_limit]').val();
-            var match_all_terms = $('input[name=match_all_terms]').val();
+            var match_all_terms = $('input[name=match_all_terms]').is(':checked');
 
             $.ajax({
                 xhr: function() {
