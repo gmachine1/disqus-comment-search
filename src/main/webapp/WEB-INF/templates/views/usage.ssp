@@ -1,7 +1,7 @@
 <div class="popup" id="usage">
 <p>Search Disqus comments by username and words. Some notes below.</p>
 <ul style="list-style-type:disc;">
-    <li><b>Disqus username</b> is case sensitive. As an example, the username for <a href="https://disqus.com/by/BobSykes/">https://disqus.com/by/BobSykes/</a> would be "BobSykes"</li>
+    <li>As an example, the username for <a href="https://disqus.com/by/BobSykes/">https://disqus.com/by/BobSykes/</a> would be <b>BobSykes</b></li>
     <li>If the <b>require match all</b> checkbox is checked, only comments which contain all search terms in query will appear in results.
     Otherwise any comment containing any of the search terms will appear in result.</li>
     <li>No terms in the query means all comments will appear in results.</li>

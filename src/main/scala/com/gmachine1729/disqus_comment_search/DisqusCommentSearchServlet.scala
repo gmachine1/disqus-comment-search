@@ -15,7 +15,7 @@ import edu.stanford.nlp.pipeline._
 import edu.stanford.nlp.ling.CoreAnnotations._
 import org.scalatra.i18n.I18nSupport
 import org.slf4j.LoggerFactory
-import scalaj.http.Http
+import scalaj.http.{Http, HttpOptions}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.{Await, Future}
@@ -123,8 +123,8 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
 
   private def usernameExists(username: String): Boolean = {
     val usernameUrl: String = String.format("https://disqus.com/by/%s/", username)
-    val resp = Http(usernameUrl).asString
-    resp.isCodeInRange(200, 299)
+    val resp = Http(usernameUrl).option(HttpOptions.followRedirects(true)).asString
+    resp.is2xx
   }
 
   private def getQueryTokens(query: String): Set[String] = {
@@ -187,7 +187,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
           Visit.create(visit)
           logger.info("wrote no username found visit to db")
         }
-        out.write(String.format("<div>Did not find any Disqus user with username <b>%s</b>. Make sure to be exact on capitalization.</div>", username))
+        out.write(String.format("<div>Did not find any Disqus user with username <b>%s</b></div>", username))
         out.flush()
       } else {
         val cursor: String = ""

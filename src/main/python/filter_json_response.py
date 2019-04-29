@@ -10,12 +10,11 @@ args = parser.parse_args()
 
 def filter_json_response(json_obj):
 	objects = json_obj["response"]["objects"]
-	comments = []
 	filtered_json_obj = {"cursor": json_obj["cursor"], "response": {"objects": {}}}
 	for obj_name, obj in objects.iteritems():
 		if not obj_name.startswith("forums.Post"):
 			continue
-		if obj["author"].get("username", None) != args.username:
+		if obj["author"].get("username", None).lower() != args.username.lower():
 			continue
 		filtered_json_obj["response"]["objects"][obj_name] = {"message": obj["message"], "author": obj["author"], "createdAt": obj["createdAt"], "url": obj.get("url", ""),
 			"forum": obj["forum"], "likes": obj["likes"], "dislikes": obj["dislikes"]}
