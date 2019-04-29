@@ -133,8 +133,6 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
     queryStringAnnotation.get(classOf[TokensAnnotation]).toSeq.map(_.lemma()).toSet
   }
 
-  val estimatedActualToLimitParamRatio: Float = 2.5.toFloat
-
   private def getDisqusLimitParam(remainingNumComments: Int): Int = {
     Math.min(DEFAULT_LIMIT, remainingNumComments)
   }
@@ -189,7 +187,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
           Visit.create(visit)
           logger.info("wrote no username found visit to db")
         }
-        out.write(String.format("<div>Did not find any Disqus user with username <b>%s</b></div>", username))
+        out.write(String.format("<div>Did not find any Disqus user with username <b>%s</b>. Make sure to be exact on capitalization.</div>", username))
         out.flush()
       } else {
         val cursor: String = ""

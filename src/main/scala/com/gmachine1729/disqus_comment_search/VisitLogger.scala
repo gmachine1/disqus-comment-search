@@ -40,6 +40,10 @@ object VisitLogger {
     (ip, referer)
   }
 
+  private def getGeoLocation(ip: String)(urlFormat: String): Try[GeoLocation] = {
+    Try(read[GeoLocation](Http(String.format(urlFormat, ip)).asString.body))
+  }
+
   def genVisitRecord(request: HttpServletRequest, visitType: Int): Future[Visit] = {
     Future {
       val (ip, referer) = getIpAndReferrer(request)
@@ -47,16 +51,22 @@ object VisitLogger {
       visit.visitType = visitType
       visit.ip = Some(ip)
       visit.referrer = referer
-      Try(read[GeoLocation](Http(String.format("http://ip-api.com/json/%s", ip)).asString.body)) match {
-        case Success(geoLocation) => {
+      val maybeGeoLocation = Iterator[String]("http://free.ipwhois.io/json/%s", "http://ip-api.com/json/%s").map(getGeoLocation(ip)).map {
+        case success@Success(geoLocation) => {
           visit.city = Some(geoLocation.city)
           visit.province = Some(geoLocation.region)
           visit.country = Some(geoLocation.country)
           visit.isp = Some(geoLocation.isp)
+          success
         }
-        case Failure(exception) => {
+        case failure@Failure(exception) => {
           LoggerFactory.getLogger(getClass).warn(exception.getMessage)
+          failure
         }
+      }.find(_.isSuccess)
+      maybeGeoLocation match {
+        case None => LoggerFactory.getLogger(getClass).warn(String.format("Could not get geolocation data for %", ip))
+        case _    =>
       }
       visit
     }
