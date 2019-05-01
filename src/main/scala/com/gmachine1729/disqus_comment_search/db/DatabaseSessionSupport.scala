@@ -22,8 +22,10 @@ trait DatabaseSessionSupport { this: ScalatraBase =>
   }
 
   after() {
-    dbSession.close
-    dbSession.unbindFromCurrentThread
+    if (dbSession != null) {
+      dbSession.close
+      dbSession.unbindFromCurrentThread
+    }
   }
 
 }

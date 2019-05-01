@@ -14,7 +14,7 @@ def filter_json_response(json_obj):
 	for obj_name, obj in objects.iteritems():
 		if not obj_name.startswith("forums.Post"):
 			continue
-		if obj["author"].get("username", None).lower() != args.username.lower():
+		if obj["author"].get("username", "").lower() != args.username.lower():
 			continue
 		filtered_json_obj["response"]["objects"][obj_name] = {"message": obj["message"], "author": obj["author"], "createdAt": obj["createdAt"], "url": obj.get("url", ""),
 			"forum": obj["forum"], "likes": obj["likes"], "dislikes": obj["dislikes"]}
