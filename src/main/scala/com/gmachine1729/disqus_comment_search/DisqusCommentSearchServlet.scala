@@ -34,6 +34,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
   val DEFAULT_LIMIT: Integer = 10
   val props = new Properties()
   props.put("annotators", "tokenize, ssplit, pos, lemma")
+  props.put("pos.model", "/usr/local/share/disqus-comment-search/edu/stanford/nlp/models/pos-tagger/english-left3words/english-left3words-distsim.tagger")
   val pipeline = new StanfordCoreNLP(props)
 
   def time[R](logMsg: String)(block: => R): R= {

@@ -37,7 +37,10 @@ javaOptions ++= Seq(
   "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"
 )
 
+mainClass in assembly := Some("com.gmachine1729.disqus_comment_search.JettyLauncher")
+
 enablePlugins(SbtTwirl)
 enablePlugins(ScalatraPlugin)
 enablePlugins(JettyPlugin)
 enablePlugins(JavaAppPackaging)
+enablePlugins(DockerPlugin)

@@ -1,5 +1,6 @@
+package com.gmachine1729.disqus_comment_search
+
 import org.eclipse.jetty.server.Server
-import org.eclipse.jetty.servlet.{ DefaultServlet, ServletContextHandler }
 import org.eclipse.jetty.webapp.WebAppContext
 import org.scalatra.servlet.ScalatraListener
 
@@ -20,3 +21,4 @@ object JettyLauncher {
     server.join
   }
 }
+
