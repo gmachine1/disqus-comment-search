@@ -73,7 +73,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
   private def requestFilteredDisqusJson(username: String, cursor: String, limit: Int): String = {
     val url = getUrl(username, cursor, limit)
     time(String.format("Retrieved from %s", url)) {
-      (new URL(url) #> String.format("python src/main/python/filter_json_response.py %s", username)).!!
+      (new URL(url) #> String.format("python /usr/local/share/disqus-comment-search/python/filter_json_response.py %s", username)).!!
     }
   }
 

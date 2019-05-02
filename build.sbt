@@ -4,7 +4,7 @@ organization := "com.gmachine1729"
 
 name := "Disqus Comment Search"
 
-version := "0.1.0-SNAPSHOT"
+version := "0.1.1"
 
 scalaVersion := "2.12.6"
 
