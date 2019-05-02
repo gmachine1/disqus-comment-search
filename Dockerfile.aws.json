@@ -1,0 +1,11 @@
+{
+  "AWSEBDockerrunVersion": "1",
+  "Image": {
+    "Name": "disqus-comment-search-tomcat2:latest"
+  },
+  "Ports": [
+    {
+      "ContainerPort": "8888"
+    }
+  ]
+}
