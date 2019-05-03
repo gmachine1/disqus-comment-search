@@ -4,7 +4,7 @@ organization := "com.gmachine1729"
 
 name := "Disqus Comment Search"
 
-version := "0.1.0-SNAPSHOT"
+version := "0.1.1"
 
 scalaVersion := "2.12.6"
 
@@ -37,7 +37,10 @@ javaOptions ++= Seq(
   "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"
 )
 
+mainClass in assembly := Some("com.gmachine1729.disqus_comment_search.JettyLauncher")
+
 enablePlugins(SbtTwirl)
 enablePlugins(ScalatraPlugin)
 enablePlugins(JettyPlugin)
 enablePlugins(JavaAppPackaging)
+enablePlugins(DockerPlugin)

@@ -34,6 +34,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
   val DEFAULT_LIMIT: Integer = 10
   val props = new Properties()
   props.put("annotators", "tokenize, ssplit, pos, lemma")
+  props.put("pos.model", "/usr/local/share/disqus-comment-search/edu/stanford/nlp/models/pos-tagger/english-left3words/english-left3words-distsim.tagger")
   val pipeline = new StanfordCoreNLP(props)
 
   def time[R](logMsg: String)(block: => R): R= {
@@ -72,7 +73,7 @@ class DisqusCommentSearchServlet extends ScalatraServlet with ScalateSupport wit
   private def requestFilteredDisqusJson(username: String, cursor: String, limit: Int): String = {
     val url = getUrl(username, cursor, limit)
     time(String.format("Retrieved from %s", url)) {
-      (new URL(url) #> String.format("python src/main/python/filter_json_response.py %s", username)).!!
+      (new URL(url) #> String.format("python /usr/local/share/disqus-comment-search/python/filter_json_response.py %s", username)).!!
     }
   }
 
