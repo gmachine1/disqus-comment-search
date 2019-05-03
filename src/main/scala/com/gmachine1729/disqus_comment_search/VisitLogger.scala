@@ -41,7 +41,13 @@ object VisitLogger {
   }
 
   private def getGeoLocation(ip: String)(urlFormat: String): Try[GeoLocation] = {
-    Try(read[GeoLocation](Http(String.format(urlFormat, ip)).asString.body))
+    val url = String.format(urlFormat, ip)
+    LoggerFactory.getLogger(getClass).info(String.format("Attempting request to %s", url))
+    Try(read[GeoLocation] {
+      val jsonResponse = Http(url).asString.body
+      LoggerFactory.getLogger(getClass).info(String.format("Json response: %s", jsonResponse))
+      jsonResponse
+    })
   }
 
   def genVisitRecord(request: HttpServletRequest, visitType: Int): Future[Visit] = {
@@ -61,6 +67,7 @@ object VisitLogger {
         }
         case failure@Failure(exception) => {
           LoggerFactory.getLogger(getClass).warn(exception.getMessage)
+          exception.printStackTrace()
           failure
         }
       }.find(_.isSuccess)
